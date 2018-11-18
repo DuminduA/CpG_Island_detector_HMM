@@ -1,14 +1,18 @@
 
 def readfile(filename):
     with open(filename, "r") as file:
-        gene_seqeunce = filename.read().replace('\n', '')
+        gene_seqeunce = file.read().replace('\n', '')
     return gene_seqeunce
 
-def main(filename):
+def main(filename, prob_file):
     gene_seqence = readfile(filename)
+    transition_matrix = building_transition_matrix(prob_file)
+    emission_matrix = building_emmision_matrix(prob_file)
 
-def building_transition_matrix():
-    filename = "probabilities.txt"
+    viterbi(gene_seqence, transition_matrix, emission_matrix)
+
+def building_transition_matrix(file):
+    filename = file
     with open(filename, "r") as file:
         gene_seqeunce = file.read().replace('\n', '').split("#")
     Transition_matrix = []
@@ -19,8 +23,8 @@ def building_transition_matrix():
                 Transition_matrix.append(i.strip().split(" "))
     return(Transition_matrix)
 
-def building_emmision_matrix():
-    filename = "probabilities.txt"
+def building_emmision_matrix(file):
+    filename = file
     with open(filename, "r") as file:
         gene_seqeunce = file.read().replace('\n', '').split("#")
     Transition_matrix = []
@@ -93,7 +97,4 @@ def viterbi(sequence, transition_matrix, emission_matrix):
 
 
 
-# building_transition_matrix()
-# building_emmision_matrix()
-
-viterbi("ACGT", building_transition_matrix(), building_emmision_matrix())
+main("inputs.txt","probabilities.txt")
