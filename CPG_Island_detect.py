@@ -1,100 +1,83 @@
+import numpy as np
+from hmmlearn import hmm
+
+states = []
+observations = []
+states_size = 0
+observations_size = 0
+start_probabilities = []
+transition_probabilities = []
+emission_probabilities = []
 
 def readfile(filename):
     with open(filename, "r") as file:
         gene_seqeunce = file.read().replace('\n', '')
-    return gene_seqeunce
+    return gene_seqeunce.upper()
 
 def main(filename, prob_file):
     gene_seqence = readfile(filename)
-    transition_matrix = building_transition_matrix(prob_file)
-    emission_matrix = building_emmision_matrix(prob_file)
+    gene_seqence.strip()
+    building_transition_matrix(prob_file)
+    building_emmision_matrix(prob_file)
 
-    viterbi(gene_seqence, transition_matrix, emission_matrix)
+    viterbi_impl = hmm.MultinomialHMM(n_components=states_size)
+    viterbi_impl.startprob_ = start_probabilities
+    viterbi_impl.transmat_ = transition_probabilities
+    viterbi_impl.emissionprob_ = emission_probabilities
+
+    input_list = []
+    for char in gene_seqence:
+        if char == "A":
+            input_list.append([0])
+        elif char == "C":
+            input_list.append([1])
+        elif char == "G":
+            input_list.append([2])
+        else:
+            input_list.append([3])
+
+    in_text = np.array(input_list)
+
+    out_text = viterbi_impl.decode(input_list, algorithm="viterbi")
+
+    out = "%s" % " ".join([states[x][-1] for x in out_text])
+    print("Output: " + out)
+
 
 def building_transition_matrix(file):
     filename = file
     with open(filename, "r") as file:
-        gene_seqeunce = file.read().replace('\n', '').split("#")
+        prob_file = file.read().replace('\n', '').split("#")
     Transition_matrix = []
-    for i in range(0, len(gene_seqeunce)):
-        if(gene_seqeunce[i].__contains__("Transition matrix")):
-            temp_list = gene_seqeunce[i+1].split("break")
+    for i in range(0, len(prob_file)):
+        if(prob_file[i].__contains__("Transition matrix")):
+            temp_list = prob_file[i+1].split("break")
             for i in temp_list:
                 Transition_matrix.append(i.strip().split(" "))
-    return(Transition_matrix)
+    global states, states_size , start_probabilities, transition_probabilities
+    start_probabilities = Transition_matrix[1][1:]
+    states_size = len(Transition_matrix[0])
+    states = Transition_matrix[0]
+
+    for i in range (1, len(Transition_matrix)):
+        transition_probabilities.append(Transition_matrix[i][1:])
+
 
 def building_emmision_matrix(file):
     filename = file
     with open(filename, "r") as file:
-        gene_seqeunce = file.read().replace('\n', '').split("#")
-    Transition_matrix = []
-    for i in range(0, len(gene_seqeunce)):
-        if(gene_seqeunce[i].__contains__("Emission probabilities")):
-            temp_list = gene_seqeunce[i+1].split("break")
+        prob_file = file.read().replace('\n', '').split("#")
+    emission_matrix = []
+    for i in range(0, len(prob_file)):
+        if(prob_file[i].__contains__("Emission probabilities")):
+            temp_list = prob_file[i+1].split("break")
             for i in temp_list:
-                Transition_matrix.append(i.strip().split(" "))
-    return(Transition_matrix)
+                emission_matrix.append(i.strip().split(" "))
+    global observations, observations_size, emission_probabilities
+    observations_size = len(emission_matrix[0])
+    observations = emission_matrix[0]
 
-def viterbi(sequence, transition_matrix, emission_matrix):
-
-    # print(transition_matrix)
-    # print(emission_matrix)
-
-    plus_prob_each_step = []
-    minus_prob_each_step = []
-
-    for symbol in range(0, len(sequence)):
-
-        symbol_plus = sequence[symbol] + "+"
-        symbol_minus = sequence[symbol] + "-"
-
-
-        if symbol == 0:
-            previous_symbol = "0"
-        else:
-            previous_symbol = sequence[symbol - 1]
-
-        if(previous_symbol == "0"):
-
-            probability_plus = float(transition_matrix[1][transition_matrix[0].index(symbol_plus) + 1])
-            probability_minus = float(transition_matrix[1][transition_matrix[0].index(symbol_minus) + 1])
-
-            plus_prob_each_step.append(probability_plus)
-            minus_prob_each_step.append(probability_minus)
-
-        else:
-            previous_plus_prob = plus_prob_each_step[len(plus_prob_each_step) - 1]
-            previous_minus_prob = minus_prob_each_step[len(minus_prob_each_step) - 1]
-
-            previous_symbol_plus = previous_symbol + "+"
-            previous_symbol_minus = previous_symbol + "-"
-
-            transition_prob_plus = []
-            transition_prob_minus = []
-            transition_prob_plus.append(transition_matrix[transition_matrix[0].index(previous_symbol_plus) + 1][transition_matrix[0].index(symbol_plus) + 1])
-            transition_prob_plus.append(transition_matrix[transition_matrix[0].index(previous_symbol_minus) + 1][transition_matrix[0].index(symbol_plus) + 1])
-            transition_prob_minus.append(transition_matrix[transition_matrix[0].index(previous_symbol_plus) + 1][transition_matrix[0].index(symbol_minus) + 1])
-            transition_prob_minus.append(transition_matrix[transition_matrix[0].index(previous_symbol_minus) + 1][transition_matrix[0].index(symbol_minus) + 1])
-
-
-            new_prob_1 = previous_plus_prob * float(transition_prob_plus[0]) * 1
-            new_prob_2 = previous_plus_prob * float(transition_prob_plus[1]) * 1
-            new_prob_3 = previous_minus_prob * float(transition_prob_minus[0]) * 1
-            new_prob_4 = previous_minus_prob * float(transition_prob_minus[1]) * 1
-
-            plus_prob_each_step.append(max(new_prob_1, new_prob_2))
-            minus_prob_each_step.append(max(new_prob_3, new_prob_4))
-
-    output = ""
-    for i in range(0, len(sequence)):
-
-        if plus_prob_each_step[i] > minus_prob_each_step[i]:
-            output = output + "+"
-        else:
-            output = output + "-"
-
-    print(output)
-
-
+    for i in range (1, len(emission_matrix)):
+        emission_probabilities.append(emission_matrix[i][1:])
 
 main("inputs.txt","probabilities.txt")
